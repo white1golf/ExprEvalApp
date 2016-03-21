@@ -3,10 +3,12 @@ import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
 
 // import Java Map Libs
+import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
 
 // import Java Stack Libs
+import java.util.Scanner;
 import java.util.Stack;
 
 // import Java console IO
@@ -24,16 +26,24 @@ class EvalListener extends ExprBaseListener {
    Stack<String> opStack = new Stack<String>();
 
    @Override
+   public void enterProg(ExprParser.ProgContext ctx) {
+       System.out.println("enterProg: ");
+   }
+   @Override
    public void exitProg(ExprParser.ProgContext ctx) {
-      System.out.println("exitProg: "); 
+      System.out.println("exitProg: ");
 
    }
-   
+   @Override
+   public void enterExpr(ExprParser.ExprContext ctx) {
+      System.out.println("enterExpr: ");
+
+   }
    @Override
    public void exitExpr(ExprParser.ExprContext ctx) {
-      System.out.println("exitExpr: "); 
-
+      System.out.println("exitExpr: ");
    }
+
 
    @Override
    public void enterAssn(ExprParser.AssnContext ctx) {
@@ -44,7 +54,7 @@ class EvalListener extends ExprBaseListener {
       System.out.println("exitAssn: "); 
    }
 
-   // Add more overrride methods if needed
+   // Add more override methods if needed
  
    @Override 
    public void visitTerminal(TerminalNode node) {
@@ -83,6 +93,7 @@ class EvalListener extends ExprBaseListener {
              // lookup vars-Map and push to evalStack
              // Integer v = ....
              // evalStack.push(v);
+              //if(vars.putIfAbsent(,))
           } 
       }
    }
@@ -92,12 +103,18 @@ public class ExprEvalApp {
    public static void main(String[] args) throws IOException {
       System.out.println("** Expression Eval w/ antlr-listener **");
 
+      //반드시 c의 역할이 어떤 것인지는 모르겠으나 그냥 실습시간에 많이 사용한 scanner를 사용할 것,
       Console c = System.console();
       if (c == null) {
          System.err.println("No Console");
          System.exit(1);
       }
-      String input = c.readLine("Input: ");
+       //Use Reader class as input. In the original skeleton code it uses c.readLine I need multi-line input. Instead of implementing it by
+       //other methods It is possible just pass Reader class to ANTLRInputStream because it is already implemented in it.
+       Reader input = c.reader();
+
+       //Comment the skeleton code.
+      //String input = c.readLine("Input: ");
       //input += '\n';
 
       // Get lexer
