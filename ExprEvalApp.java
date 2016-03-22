@@ -52,6 +52,9 @@ class EvalListener extends ExprBaseListener {
 
     @Override
     public void exitExpr(ExprParser.ExprContext ctx) {
+        if(ctx.getParent().getText().equals("prog")){
+            System.out.println("output stack is "+evalStack.toString());
+        }
         System.out.println("exitExpr: ");
     }
 
@@ -59,10 +62,15 @@ class EvalListener extends ExprBaseListener {
     @Override
     public void enterAssn(ExprParser.AssnContext ctx) {
         System.out.println("enterAssn: ");
+        System.out.println(ctx.ID().getText());
+        System.out.println(ctx.INT().getText());
+        vars.put(ctx.ID().getText(), Integer.parseInt(ctx.INT().getText()));
     }
 
     @Override
     public void exitAssn(ExprParser.AssnContext ctx) {
+//        System.out.println(ctx.ID().getText());
+//        System.out.println(ctx.INT().getText());
         System.out.println("exitAssn: ");
     }
 
@@ -74,22 +82,28 @@ class EvalListener extends ExprBaseListener {
         if(s.matches("[+|-|*|/|(|)]"))  pushOpToStack(s);
         else if (s.matches("[0-9]+")) { // INT
             System.out.println("Terminal-INT " + s);
-            Integer i = new Integer(s);
-            //It can't distinguish value of assn from INT;
-            evalStack.push(i);
+            if(node.getParent().getText().equals("expr")){
+                Integer i = new Integer(s);
+                evalStack.push(i);
+            }
         } else if(s.matches("[a-zA-Z]")){ // ID
             //Now it will print even NEWLINE WS,
             System.out.println("Terminal-ID " + s);
-            // lookup vars-Map and push to evalStack
-            // Integer v = ....
-            // evalStack.push(v);
-            //if(vars.putIfAbsent(,))
+            if(node.getParent().getText().equals("expr")){
+                if(vars.containsKey(s))
+                    evalStack.push(vars.get(s));
+                else {
+                    System.err.println("No assignment");
+                    System.exit(1);
+                }
+            }
         }
     }
     /*
      * Compare operator based on Shunting-Yard Algorithm.
      */
     public void pushOpToStack(String op) {
+        System.out.println("Terminal "+op);
         if (opStack.empty() || op.equals("(")) {
             opStack.push(op);
         } else if (op.equals(")")){
@@ -101,6 +115,8 @@ class EvalListener extends ExprBaseListener {
                 evalStack.push(opStack.pop());
             }
             opStack.pop();
+            //여기 문제가 만일 스택에 이미 (가 있다고 치면 (는 우선순위 해쉬맵에 없어서
+            //널포인터익셉션이 발셍.
         } else if (opPriority.get(op) <= opPriority.get(opStack.lastElement())){
             evalStack.push(opStack.pop());
             pushOpToStack(op);
