@@ -21,9 +21,11 @@ class EvalListener extends ExprBaseListener {
     // Hash-map for operators' integer value to represent priority.
     Map<String, Integer> opPriority = new HashMap<String, Integer>();
     // stack for expression tree evaluation
-    Stack<Object> evalStack = new Stack<Object>();
+    Stack<String> evalStack = new Stack<String>();
     // stack for operators (+-*/()) in shunting-yard algorithm
     Stack<String> opStack = new Stack<String>();
+    // value for cheking in terminal node if this is from assn or expr.
+    boolean isAssnPropBlocked = false;
 
     //Initialize Class.
     public EvalListener() {
@@ -48,11 +50,16 @@ class EvalListener extends ExprBaseListener {
     public void enterExpr(ExprParser.ExprContext ctx) {
         System.out.println("enterExpr: ");
 
+
     }
 
     @Override
     public void exitExpr(ExprParser.ExprContext ctx) {
-        if(ctx.getParent().getText().equals("prog")){
+        //if it is expr that need to be calculated.
+        if(ctx.getParent().getParent() == null){
+            while(!opStack.isEmpty()){
+                evalStack.push(opStack.pop());
+            }
             System.out.println("output stack is "+evalStack.toString());
         }
         System.out.println("exitExpr: ");
@@ -65,6 +72,7 @@ class EvalListener extends ExprBaseListener {
         System.out.println(ctx.ID().getText());
         System.out.println(ctx.INT().getText());
         vars.put(ctx.ID().getText(), Integer.parseInt(ctx.INT().getText()));
+        isAssnPropBlocked = true;
     }
 
     @Override
@@ -72,6 +80,7 @@ class EvalListener extends ExprBaseListener {
 //        System.out.println(ctx.ID().getText());
 //        System.out.println(ctx.INT().getText());
         System.out.println("exitAssn: ");
+        isAssnPropBlocked = false;
     }
 
     // Add more override methods if needed
@@ -79,19 +88,20 @@ class EvalListener extends ExprBaseListener {
     @Override
     public void visitTerminal(TerminalNode node) {
         String s = node.getText();
-        if(s.matches("[+|-|*|/|(|)]"))  pushOpToStack(s);
+        if(s.matches("[\\+|\\-|*|/|(|)]"))  pushOpToStack(s);
         else if (s.matches("[0-9]+")) { // INT
             System.out.println("Terminal-INT " + s);
-            if(node.getParent().getText().equals("expr")){
-                Integer i = new Integer(s);
-                evalStack.push(i);
+            //Use Flag to check if this signal from assn or expr.
+            if(isAssnPropBlocked == false){
+                //Integer i = new Integer(s);
+                evalStack.push(s);
             }
         } else if(s.matches("[a-zA-Z]")){ // ID
             //Now it will print even NEWLINE WS,
             System.out.println("Terminal-ID " + s);
-            if(node.getParent().getText().equals("expr")){
+            if(isAssnPropBlocked == false){
                 if(vars.containsKey(s))
-                    evalStack.push(vars.get(s));
+                    evalStack.push(vars.get(s).toString());
                 else {
                     System.err.println("No assignment");
                     System.exit(1);
@@ -117,7 +127,9 @@ class EvalListener extends ExprBaseListener {
             opStack.pop();
             //여기 문제가 만일 스택에 이미 (가 있다고 치면 (는 우선순위 해쉬맵에 없어서
             //널포인터익셉션이 발셍.
-        } else if (opPriority.get(op) <= opPriority.get(opStack.lastElement())){
+        }else if (opStack.lastElement() != "(" ){
+            opStack.push(op);
+        }else if (opPriority.get(op) <= opPriority.get(opStack.lastElement())){
             evalStack.push(opStack.pop());
             pushOpToStack(op);
         } else
