@@ -4,11 +4,9 @@ import org.antlr.v4.runtime.tree.*;
 
 // import Java Map Libs
 import java.io.Reader;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 // import Java Stack Libs
-import java.util.Stack;
 
 // import Java console IO
 import java.io.Console;
@@ -21,7 +19,7 @@ class EvalListener extends ExprBaseListener {
     // Hash-map for operators' integer value to represent priority.
     Map<String, Integer> opPriority = new HashMap<String, Integer>();
     // stack for expression tree evaluation
-    Stack<String> evalStack = new Stack<String>();
+    Stack<Object> evalStack = new Stack<Object>();
     // stack for operators (+-*/()) in shunting-yard algorithm
     Stack<String> opStack = new Stack<String>();
     // value for cheking in terminal node if this is from assn or expr.
@@ -55,12 +53,13 @@ class EvalListener extends ExprBaseListener {
 
     @Override
     public void exitExpr(ExprParser.ExprContext ctx) {
-        //if it is expr that need to be calculated.
+        //if it is expr which is direct child of prog and is needed to be calculated.
         if(ctx.getParent().getParent() == null){
             while(!opStack.isEmpty()){
                 evalStack.push(opStack.pop());
             }
-            System.out.println("output stack is "+evalStack.toString());
+            System.out.println("output stack is " + evalStack.toString());
+            System.out.println(calcPostFix());
         }
         System.out.println("exitExpr: ");
     }
@@ -93,15 +92,14 @@ class EvalListener extends ExprBaseListener {
             System.out.println("Terminal-INT " + s);
             //Use Flag to check if this signal from assn or expr.
             if(isAssnPropBlocked == false){
-                //Integer i = new Integer(s);
-                evalStack.push(s);
+                evalStack.push(Integer.parseInt(s));
             }
         } else if(s.matches("[a-zA-Z]")){ // ID
             //Now it will print even NEWLINE WS,
             System.out.println("Terminal-ID " + s);
             if(isAssnPropBlocked == false){
                 if(vars.containsKey(s))
-                    evalStack.push(vars.get(s).toString());
+                    evalStack.push(vars.get(s));
                 else {
                     System.err.println("No assignment");
                     System.exit(1);
@@ -114,7 +112,7 @@ class EvalListener extends ExprBaseListener {
      */
     public void pushOpToStack(String op) {
         System.out.println("Terminal "+op);
-        if (opStack.empty() || op.equals("(")) {
+        if (opStack.empty() || op.equals("(") || opStack.lastElement().equals("(")) {
             opStack.push(op);
         } else if (op.equals(")")){
             if(opStack.empty()) {
@@ -125,16 +123,42 @@ class EvalListener extends ExprBaseListener {
                 evalStack.push(opStack.pop());
             }
             opStack.pop();
-            //여기 문제가 만일 스택에 이미 (가 있다고 치면 (는 우선순위 해쉬맵에 없어서
-            //널포인터익셉션이 발셍.
-        }else if (opStack.lastElement() != "(" ){
-            opStack.push(op);
         }else if (opPriority.get(op) <= opPriority.get(opStack.lastElement())){
             evalStack.push(opStack.pop());
             pushOpToStack(op);
+        //새로들어오는 인자의 우선순위가 기존 인자보다 작을때.
         } else
             opStack.push(op);
+    }
 
+    public int calcPostFix(){
+        if(evalStack.size() == 1) return ((Number)evalStack.remove(0)).intValue();
+        for(int i=0; i < evalStack.size(); i++){
+            if( evalStack.get(i) instanceof String){
+                //remove하는 순서가 바뀌면 stack의 인덱스 값에 영향을 미치므로 뒤부터 뺌.
+                String s = (String) evalStack.remove(i);
+                int operand2 = ((Integer)evalStack.remove(i - 1)).intValue();
+                int operand1 = ((Integer)evalStack.remove(i - 2)).intValue();
+
+                switch (s) {
+                    case "+":
+                        evalStack.add(i-2,new Integer(operand1+operand2));
+                        break;
+                    case "-":
+                        evalStack.add(i-2,new Integer(operand1-operand2));
+                        break;
+                    case "*":
+                        evalStack.add(i-2,new Integer(operand1*operand2));
+                        break;
+                    //문제는 실수값이 나올 수 있는데 / 연산자 때문에 몫만 구해짐.
+                    case "/":
+                        evalStack.add(i-2,new Integer(operand1/operand2));
+                        break;
+                }
+                break;
+            }
+        }
+    return calcPostFix();
     }
 }
 public class ExprEvalApp {
