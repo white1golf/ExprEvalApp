@@ -150,8 +150,7 @@ class EvalListener extends ExprBaseListener {
                         break;
                     //문제는 실수값이 나올 수 있는데 / 연산자 때문에 몫만 구해짐.
                     case "/":
-                        if(operand1%operand2 == 0)
-                            evalStack.add(i-2, operand1 / operand2);
+                        evalStack.add(i-2, operand1 / operand2);
                         break;
                 }
                 break;
